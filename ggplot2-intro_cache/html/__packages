@@ -1,0 +1,10 @@
+base
+knitr
+animation
+ggplot2
+dplyr
+tidyr
+purrr
+gganimate
+maps
+readr

@@ -6,19 +6,55 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(animation)
+animation::ani.options(
+  autobrowse = FALSE,
+  interval = 0.2,
+  ani.width = 750,
+  ani.height = 525
+)
+
+knitr::opts_knit$set(animation.fun = function(x, options, format = "gif") {
+  x = c(knitr:::sans_ext(x), knitr:::file_ext(x))
+  fig.num = options$fig.num
+  format = sub("^[.]", "", format)
+  fig.fname = paste0(sub(paste0(fig.num, "$"), "*", x[1]),
+                     ".", x[2])
+  mov.fname = paste0(sub(paste0(fig.num, "$"), "", x[1]), ".",
+                     format)
+
+  # order correctly
+  figs <- Sys.glob(fig.fname)
+  figs <- figs[order(as.numeric(stringr::str_match(figs,
+    paste0("(\\d+)\\.", x[2]))[, 2]))]
+
+  animation::im.convert(figs, output = mov.fname)
+
+  sprintf("![%s](%s)", options$label, paste0(opts_knit$get("base.url"),
+    mov.fname))
+})
+
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  echo = TRUE,
+  cache = TRUE
+)
 ```
 
 ## What is ggplot2?
 
-ggplot2 is a data visualization package written by [Hadley Wickham](http://www.twitter.com/hadleywickham) that uses the "grammar of graphics." The grammar of graphics provides a consistent way to describe the components of graph, allowing us to move beyond specific types of plots (e.g., boxplot, scatterplot, etc.) to different elements that compose the plot. As the name would imply, the grammar of graphics is a language we can use to describe and build visualizations.
+**ggplot2** is a data visualization package written by [Hadley Wickham](http://www.twitter.com/hadleywickham) that uses the "grammar of graphics." The grammar of graphics provides a consistent way to describe the components of graph, allowing us to move beyond specific types of plots (e.g., boxplot, scatterplot, etc.) to different elements that compose the plot. As the name would imply, the grammar of graphics is a language we can use to describe and build visualizations.
 
-Today, we'll look at the basic syntax of ggplot2 graphics using simulated regression data.
+Today, we'll look at the basic syntax of **ggplot2** graphics, as well as some other tidyverse tools, using simulated regression data.
 
 ```{r packages, message = FALSE}
 library(ggplot2)
 library(dplyr)
 ```
+
+If you are so inclined, all of the code for this document is on my [Github page](https://github.com/wjakethompson/pols-909-ggplot2).
 
 
 ## The data
@@ -29,11 +65,14 @@ First, we'll define a function to generate data.
 generate_data <- function(n, b0, b1, b2, bint, seed) {
   set.seed(seed)
   x1 <- rnorm(n = n, mean = 0, sd = 1)
-  x2 <- sample(0:1, size = n, replace = TRUE)
-  e <- rnorm(n = n, mean = 0, sd = sqrt(5))
+  x2 <- sample(factor(c("Male", "Female")), size = n, replace = TRUE,
+    prob = c(0.4, 0.6))
+  x3 <- sample(factor(c("Caucasian", "Hispanic", "African American")), size = n,
+    replace = TRUE, prob = c(0.5, 0.2, 0.3))
+  e <- rnorm(n = n, mean = 0, sd = sqrt(10))
   
-  y <- b0 + (b1 * x1) + (b2 * x2) + (bint * x1 * x2) + e
-  data_frame(y, x1, x2)
+  y <- b0 + (b1 * x1) + (b2 * as.numeric(x2)) + (bint * x1 * as.numeric(x2)) + e
+  data_frame(outcome = y, predictor = x1, gender = x2, race = x3)
 }
 ```
 
@@ -42,4 +81,536 @@ And then, we will use that function to generate a sample for our example.
 ```{r sample_data}
 mlm_data <- generate_data(n = 1000, b0 = 3, b1 = 5, b2 = 3, bint = 4,
   seed = 9416)
+mlm_data
 ```
+
+
+## Using ggplot2
+
+Because **ggplot2** is built on the grammar of graphics, the code for almost all plots will follow the same format.
+
+```{r gg_structure, eval = FALSE}
+ggplot(data = <data>, mapping = aes(<mappings>)) +
+  geom_<element>()
+```
+
+In this structure `data` defines the data for the plot, `mapping` defines how the aesthetics are mapped to different variables, and the `geom` commands add elements to the plot. For example, using our simulated data, we can map the predictor to the x-axis, the outcome to the y-axis, and make a scatterplot.
+
+```{r basic_scatter}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point()
+```
+
+We could also make a bar plot to show the number of respondents from each group.
+
+```{r basic_bar}
+ggplot(data = mlm_data, mapping = aes(x = race)) +
+  geom_bar()
+```
+
+Or we could make a histogram to look at the distribution of our outcome variable.
+
+```{r basic_hist}
+ggplot(data = mlm_data, mapping = aes(x = outcome)) +
+  geom_histogram()
+```
+
+Notice that for the barplot and histogram we did not define an aesthetic for the y-axis. By default **ggplot2** will calculate the count for each value on the x-axis. For each geom, the help pages will tell you which aesthetics are required, and which other aesthetics can be specified if desired (e.g., `?geom_histogram`).
+
+
+## Altering the default plot
+
+Let's go back to our scatterplot to look at how we can change the details to look more like what we want.
+
+```{r basic_scatter2}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point()
+```
+
+We can change aspects of the geom itself by adding arguments to the geom call.
+
+```{r next_scatter}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point(color = "blue", size = 3, alpha = 0.3, shape = 15)
+```
+
+Here, we've make the dots square, bigger, blue, and slightly transparent. A full list of available shapes is available [here](http://www.cookbook-r.com/Graphs/Shapes_and_line_types/).
+
+It is also possible to map these aesthetics to variables in the dataset, just like we did with the axes.
+
+```{r aes_scatter}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
+  color = gender)) +
+  geom_point()
+```
+
+Now each gender has its own color, and a legend is automatically generated. We can also mix aesthetics that are and are not mapped to variables.
+
+```{r mixed_scatter}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
+  color = gender)) +
+  geom_point(shape = 15, alpha = 0.6)
+```
+
+Here, color is still assigned to gender, but the shape and alpha aesthetics are applied to the entire geom.
+
+
+## Layering geoms
+
+Often, we want to add additional elements to our plots. This is straightforward using **ggplot2**, we simply add another geom.
+
+```{r layer_geom}
+ggplot(data = mlm_data, aes(x = predictor, y = outcome)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+By default, `geom_smooth` uses `method = "gam"` for sample greater than or equal to 1000, but we can choose a linear model by using `method = "lm"`. Just like before we can also map aesthetics to other variables.
+
+```{r layer_aes}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
+  color = gender)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+It's also possible to apply map aesthetics to additional variables for only specific geoms.
+
+```{r geom_aes}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point() +
+  geom_smooth(mapping = aes(color = gender), method = "lm")
+```
+
+Notice that we've moved the color mapping to the `geom_smooth` call. This results in a different smoothed line for each group, but this is not extended to the points. Aesthetics that are defined in the top `ggplot` call are global and get applied to all geoms, whereas aesthetics defined within the geom are local and apply only to that specific geom.
+
+This can also be applied to data. For example, we could only plot points from the Hispanic group, but use the full data set to fit the smooth lines.
+
+```{r geom_data}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point(data = filter(mlm_data, race == "Hispanic")) +
+  geom_smooth(mapping = aes(color = gender), method = "lm")
+```
+
+
+## Splitting apart groups
+
+Sometimes it can be beneficial to look at groups separately, rather than together in a single plot. This can be accomplished with facetting.
+
+```{r facet}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ gender)
+```
+
+It may also be helpful to plot the full data within each facet and just highlight the specific group. This can be accomplished by using two calls to geom_point, and removing the facetting variable in the first.
+
+```{r facet_group}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
+  geom_point(mapping = aes(color = gender), alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ gender)
+```
+
+
+## Making it look pretty
+
+So far we've looked at how we can use geoms and aesthetics to create the elements of a plot. But **ggplot2** also provides methods for formatting the plots to look exactly how you want. For example, we can add titles and change scales.
+
+```{r labs_scale}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
+  geom_point(mapping = aes(color = gender), alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ gender) +
+  labs(
+    x = "An important predictor",
+    y = "Representative outcome",
+    title = "An important finding",
+    subtitle = "More details about this very important thing"
+  ) +
+  scale_x_continuous(breaks = seq(-5, 5, 1)) +
+  scale_y_continuous(breaks = seq(-100, 100, 10))
+```
+
+We can also define the colors that get used.
+
+```{r scale_color}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
+  geom_point(mapping = aes(color = gender), alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ gender) +
+  labs(
+    x = "An important predictor",
+    y = "Representative outcome",
+    title = "An important finding",
+    subtitle = "More details about this very important thing"
+  ) +
+  scale_x_continuous(breaks = seq(-5, 5, 1)) +
+  scale_y_continuous(breaks = seq(-100, 100, 10)) +
+  scale_color_manual(values = c("red", "blue"))
+```
+
+Basically anything you want to change about the looks can be altered with scales or themes.
+
+```{r themes}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
+  geom_point(mapping = aes(color = gender), alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  facet_wrap(~ gender) +
+  labs(
+    x = "An important predictor",
+    y = "Representative outcome",
+    title = "An important finding",
+    subtitle = "More details about this very important thing"
+  ) +
+  scale_x_continuous(breaks = seq(-5, 5, 1)) +
+  scale_y_continuous(breaks = seq(-100, 100, 10)) +
+  scale_color_manual(values = c("red", "blue")) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(face = "italic"),
+    axis.title = element_text(size = 8)
+  )
+```
+
+To format legends, we can use the `guides` function.
+
+```{r legends}
+ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
+  geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
+  geom_point(mapping = aes(color = gender), alpha = 0.5) +
+  geom_smooth(method = "lm", color = "gold") +
+  facet_wrap(~ gender) +
+  labs(
+    x = "An important predictor",
+    y = "Representative outcome",
+    title = "An important finding",
+    subtitle = "More details about this very important thing"
+  ) +
+  scale_x_continuous(breaks = seq(-5, 5, 1)) +
+  scale_y_continuous(breaks = seq(-100, 100, 10)) +
+  scale_color_manual(values = c("red", "blue")) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    panel.grid.minor.x = element_blank(),
+    plot.title = element_text(face = "bold", size = 14),
+    plot.subtitle = element_text(face = "italic", size = 12),
+    axis.title = element_text(size = 10),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8)
+  ) +
+  guides(
+    color = guide_legend(title = "Gender", title.position = "top",
+      title.hjust = 0.5, label.position = "bottom", label.hjust = 0.5,
+      keywidth = unit(1, "cm"), override.aes = list(alpha = 1, size = 3))
+  )
+```
+
+As can be seen from this last plot, the downside to **ggplot2** is that the code to create a plot can become quite verbose. However, this is because we are able to alter almost any aspect of the plot.
+
+
+## Endless possibilities
+
+So far, we've only talked in detail about a few commands that would be beneficial for creating plots typical of a regression. However there are many more geoms, scales, and theme options to create almost any type of graphic you can think of.
+
+For example, we can plot how student adapt through different levels of an adaptive assessment.
+
+```{r emip_adapt, echo = FALSE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 7, out.width = "80%", fig.align = "center"}
+load("data/EMIP_Data_Simulated.RData")
+library(tidyr)
+
+num_testlets <- max(cur_data$TestletNum)
+num_stu <- 3000
+
+trans_matrix <- data.frame(TestletNum = 1:num_testlets, IP = NA, DP = NA, PP = NA, "T" = NA, S = NA)
+for(r in 1:nrow(trans_matrix)){
+    for(c in 2:ncol(trans_matrix)){
+        trans_matrix[r,c] <- length(which(cur_data$TestletNum == r & cur_data$LL == (c - 1)))
+    }
+}
+
+# find different patterns & n for each pattern
+stuIDs <- unique(cur_data$StuID)
+patterns <- list()
+for(s in 1:length(stuIDs)){
+    stu_data <- filter(cur_data, StuID == stuIDs[s])
+    pattern_row <- data.frame(id = stuIDs[s], num_testlet = nrow(stu_data), pattern = NA, stringsAsFactors = FALSE)
+    pattern_row$pattern <- paste0("[", paste(stu_data$LL, collapse = ","), "]")
+    patterns[[s]] <- pattern_row
+}
+patterns <- do.call("rbind", patterns)
+patterns <- filter(patterns, num_testlet > 2)
+pattern_count <- as.data.frame(table(patterns$pattern))
+#pattern_count <- filter(pattern_count, Freq > 6)
+pattern_count <- pattern_count %>%
+    top_n(50, Freq)
+
+AllPatterns <- list()
+if(nrow(pattern_count) > 0){
+    for(r in 1:nrow(pattern_count)){
+        pattern_vec <- as.character(pattern_count[r,"Var1"])
+        pattern_vec <- gsub("[[]", "", pattern_vec)
+        pattern_vec <- gsub("[]]", "", pattern_vec)
+        pattern_vec <- as.numeric(unlist(strsplit(pattern_vec, ",")))
+        final_level <- pattern_vec[length(pattern_vec)]
+        pattern_frame <- data.frame(TestletNum = 1:length(pattern_vec), LL = pattern_vec, pattern_id = r, final_LL = final_level, stringsAsFactors = FALSE)
+        pattern_list <- list()
+        new_id <- NULL
+        for(f in 1:pattern_count[r,"Freq"]){
+            pattern_list[[f]] <- pattern_frame
+            new_id <- c(new_id, rep(f, length(pattern_vec)))
+        }
+        pattern_frame <- do.call("rbind", pattern_list)
+        
+        pattern_frame$line_id <- paste0(pattern_frame$pattern_id, "_", new_id)
+        AllPatterns[[r]] <- pattern_frame
+    }
+}
+AllPatterns <- do.call("rbind", AllPatterns)
+
+# Plots
+PlotData <- trans_matrix %>%
+    gather("LL", "NumStu", 2:6)
+
+PlotData$LL <- factor(PlotData$LL, levels = c("IP", "DP", "PP", "T", "S"))
+PlotData$LL_Numeric <- as.numeric(PlotData$LL)
+PlotData[which(PlotData$NumStu == 0),"NumStu"] <- NA
+PlotData <- PlotData[complete.cases(PlotData),]
+
+ggplot() +
+  geom_line(aes(x = AllPatterns$TestletNum, y = AllPatterns$LL,
+    group = AllPatterns$line_id, color = factor(AllPatterns$final_LL)),
+    stat = "smooth", method = "loess", alpha = 0.009, size = 1) +
+  geom_point(aes(x = PlotData$TestletNum, y = PlotData$LL_Numeric,
+    size = PlotData$NumStu), color = "black", alpha = 0.4) +
+  scale_x_continuous(lim = c(1, num_testlets),
+    breaks = seq(1, num_testlets, 1)) +
+  scale_y_continuous(lim = c(0,6), breaks = seq(0,6,1),
+    labels = c(0, "Initial\nPrecursor", "Distal\nPrecursor",
+      "Proximal\nPrecursor", "Target", "Successor", 6)) +
+  coord_cartesian(ylim = c(0.75, 5.25), xlim = c(0.75,
+    max(AllPatterns$TestletNum, na.rm = TRUE) + 0.25)) +
+  labs(x = "Testlet Number", y = "Linkage Level") +
+  scale_size_area(name = "Number of\nStudents", limits = c(0, num_stu),
+    max_size = 15, breaks = c(100, 250, seq(500, num_stu, 500))) +
+  scale_color_brewer(type = "qual", palette = 6,
+    labels = c("Initial\nPrecursor", "Distal\nPrecursor", "Proximal\nPrecursor",
+      "Target", "Successor"), name = "Ending\nLinkage Level") +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "vertical"
+  ) +
+  guides(
+    color = guide_legend(override.aes = list(alpha = 1)),
+    size = guide_legend(direction = "horizontal", nrow = 1)
+  )
+```
+
+Or we can look at the probability of a respondent providing the correct response to an item, given their ability, in different types of psychometric models.
+
+```{r emip_mirt, echo = FALSE, message = FALSE, fig.width = 10, fig.height = 11, out.width = "70%", fig.align = "center"}
+library(tidyr)
+library(purrr)
+
+logit <- function(x) {
+  exp(x) / (1 + exp(x))
+}
+comp <- function(x, y, a1 = 1, a2 = 1, d = 0, c = 0) {
+  lin_comb <- (a1 * x) + (a2 * y)
+  c + (1 - c) * logit(lin_comb - d)
+}
+noncomp <- function(x, y, a1 = 1, a2 = 1, d1 = 0, d2 = 0, c = 0) {
+  c + (1 - c) * prod(logit((a1 * x) - d1), logit((a2 * y) - d2))
+}
+partcomp <- function(x, y, a1 = 1, a2 = 1, a3 = 0.3, d = 0, c = 0) {
+  c + (1 - c) * logit((a1 * x) + (a2 * y) + (a3 * x * y) - d)
+}
+
+theta_1 <- seq(-3, 3, 0.01)
+theta_2 <- seq(-3, 3, 0.01)
+
+pl1 <- crossing(theta_1, theta_2) %>%
+  mutate(
+    Model = "1PL",
+    Compensatory = map2_dbl(.x = theta_1, .y = theta_2, .f = comp),
+    Noncompensatory = map2_dbl(.x = theta_1, .y = theta_2, .f = noncomp),
+    Partial = map2_dbl(.x = theta_1, .y = theta_2, .f = partcomp, a3 = 0.3)
+  )
+
+pl2 <- crossing(theta_1, theta_2) %>%
+  mutate(
+    Model = "2PL",
+    Compensatory = map2_dbl(.x = theta_1, .y = theta_2, .f = comp,
+      a1 = 0.8, a2 = 1.8),
+    Noncompensatory = map2_dbl(.x = theta_1, .y = theta_2, .f = noncomp,
+      a1 = 0.8, a2 = 1.8),
+    Partial = map2_dbl(.x = theta_1, .y = theta_2, .f = partcomp,
+      a1 = 0.8, a2 = 1.8, a3 = 0.3)
+  )
+
+pl3 <- crossing(theta_1, theta_2) %>%
+  mutate(
+    Model = "3PL",
+    Compensatory = map2_dbl(.x = theta_1, .y = theta_2, .f = comp,
+      a1 = 0.8, a2 = 1.8, c = 0.2),
+    Noncompensatory = map2_dbl(.x = theta_1, .y = theta_2, .f = noncomp,
+      a1 = 0.8, a2 = 1.8, c = 0.2),
+    Partial = map2_dbl(.x = theta_1, .y = theta_2, .f = partcomp,
+      a1 = 0.8, a2 = 1.8, a3 = 0.3, c = 0.2)
+  )
+
+bind_rows(pl1, pl2, pl3) %>%
+  gather(Method, Probability, Compensatory:Partial) %>%
+  mutate(Method = factor(Method, levels = c("Compensatory", "Partial",
+    "Noncompensatory"), labels = c("Compensatory", "Partially Compensatory",
+      "Noncompensatory"))) %>%
+  ggplot(mapping = aes(x = theta_1, y = theta_2)) +
+  facet_grid(Model ~ Method) +
+  geom_raster(aes(fill = Probability), interpolate = TRUE) +
+  geom_contour(aes(z = Probability), color = "black", binwidth = 0.1) +
+  scale_x_continuous(breaks = seq(-10, 10, 1)) +
+  scale_y_continuous(breaks = seq(-10, 10, 1)) +
+  scale_fill_distiller(name = "Probability of Correct Response",
+    palette = "Spectral", direction = -1, limits = c(0, 1),
+    breaks = seq(0, 1, 0.1)) +
+  labs(x = expression(paste(theta[1])), y = expression(paste(theta[2]))) +
+  theme_minimal() +
+  theme(
+    aspect.ratio = 1,
+    legend.position = "bottom",
+    legend.title = element_text(vjust = 0.5, size = 14),
+    legend.text = element_text(size = 12),
+    axis.text = element_text(size = 12),
+    axis.title = element_text(size = 14),
+    strip.text = element_text(face = "bold", size = 14),
+    legend.key.width = unit(1, "inches")
+  ) +
+  guides(fill = guide_colorbar(title.position = "top", title.hjust = 0.5))
+```
+
+Alternatively we could do more fun things like look at which US cities have the most breweries.
+
+```{r brew_map, echo = FALSE, message = FALSE, out.width = "80%", fig.align = "center"}
+library(maps)
+library(readr)
+all_breweries <- read_csv("data/all_breweries.csv",
+  col_types = "cnnnnccccnncnn")
+
+states <- map_data("state")
+brew_loc <- all_breweries %>%
+  filter(!(state %in% c("Alaska", "Hawaii"))) %>%
+  group_by(state, full_city, city_lon, city_lat) %>%
+  summarize(
+    num_brewery = n(),
+    mean_rating = mean(brewery_rating, na.rm = TRUE),
+    mean_beeravg = mean(beer_avg, na.rm = TRUE)
+  ) %>%
+  arrange(desc(num_brewery))
+brew_loc <- brew_loc[which(complete.cases(brew_loc)), ]
+
+ggplot() +
+  geom_polygon(data = states, mapping = aes(x = long, y = lat, group = group),
+    color = "white") +
+  geom_point(data = brew_loc, mapping = aes(x = city_lon, y = city_lat,
+    size = num_brewery), color = "red", alpha = 0.5) +
+  scale_size_area(name = "Number of\nBreweries", breaks = seq(10, 60, 10)) +
+  coord_map() +
+  labs(title = "All US Breweries") +
+  theme_void() +
+  theme(
+    plot.title = element_text(size = 12, face = "bold",
+      margin = margin(3, 0, 0, 0)),
+    legend.position = "bottom",
+    legend.title = element_text(size = 8)
+  ) +
+  guides(size = guide_legend(nrow = 1))
+```
+
+Or look at the distribution of brewery ratings for the surrounding states.
+
+```{r pirate, echo = FALSE, message = FALSE, out.width = "80%", fig.align = "center"}
+brew_plot <- all_breweries %>%
+  filter(!is.na(brewery_rating), !is.na(num_beers),
+    state %in% c("Kansas", "Oklahoma", "Missouri", "Missouri", "Iowa",
+      "Nebraska", "Colorado"),
+    num_beers < 400)
+
+sum_data <- brew_plot %>%
+  group_by(state) %>%
+  summarize(mean = mean(brewery_rating), sd = sd(brewery_rating)) %>%
+  mutate(lb = mean - sd, ub = mean + sd)
+
+ggplot(data = sum_data, mapping = aes(x = state, y = mean, color = state,
+    fill = state)) +
+  geom_bar(stat = "identity", alpha = 0.2, color = NA) +
+  geom_boxplot(mapping = aes(ymin = lb, lower = lb, middle = mean, upper = ub,
+    ymax = ub), stat = "identity", alpha = 0.4) +
+  geom_violin(data = brew_plot, mapping = aes(x = state, y = brewery_rating),
+    fill = NA) +
+  geom_jitter(data = brew_plot, mapping = aes(x = state, y = brewery_rating),
+    height = 0, width = 0.15, alpha = 0.2) +
+  scale_y_continuous(breaks = seq(0, 5, 1)) +
+  labs(x = NULL, y = "Brewery Rating",
+       title = "Distributions of Brewery Ratings",
+       subtitle = "It's a pirate plot!") +
+  theme_bw() +
+  theme(plot.title = element_text(face = "bold", size = 12),
+        plot.subtitle = element_text(face = "italic", size = 10),
+        axis.text = element_text(size = 8),
+        axis.title = element_text(size = 10),
+        axis.title.y = element_text(margin = margin(0, 5, 0, 0)),
+        legend.position = "none",
+        panel.grid.major.x = element_blank())
+```
+
+Finally, there are many extensions to **ggplot2** (like the [**gganimate**](https://github.com/dgrtwo/gganimate) package from [David Robinson](https://twitter.com/drob)), which we can use to plot the probability of KU winning a basketball game over time.
+
+```{r ani_example, echo = FALSE, message = FALSE, fig.align = "center", fig.show = "animate", interval = 0.2, warning = FALSE}
+full_game <- read.csv("data/ku_kstate.csv", stringsAsFactors = FALSE)
+
+library(gganimate)
+
+p <- full_game %>%
+  filter(second %% 20 == 0) %>%
+  gather(team, winprob, home_winprob:away_winprob) %>%
+  ggplot(aes(x = min_played, y = winprob, color = team, frame = min_played)) +
+  geom_line(aes(cumulative = TRUE), size = 1) +
+  scale_color_manual(values = c("#512888", "#0051BA"),
+    labels = c("Kansas State", "Kansas")) +
+  geom_hline(aes(yintercept = 0.5), color = "#000000", linetype = "dashed",
+    size = 1) +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.1),
+    labels = paste0(seq(0, 100, by = 10), "%")) +
+  scale_x_continuous(limits = c(0, 40), breaks = seq(0, 40, 4),
+    labels = paste0(seq(40, 0, -4))) +
+  labs(y = "Win Probability", x = "Minutes Remaining") +
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+gg_animate(p, interval = 0.2, title_frame = FALSE)
+```
+
+I really don't think it's an exaggeration to say the possibilities are endless!
+
+
+## Additional Resources
+
+* [Everything ggplot2](http://docs.ggplot2.org/current/)
+* [Stack Overflow](http://stackoverflow.com/tags/ggplot2/)
+* [ggplot2: Elegant graphics for data analysis](https://github.com/hadley/ggplot2-book) (Hadley Wickham)
+* [R for Data Science: Data Visualization](http://r4ds.had.co.nz/data-visualisation.html) (Hadley Wickham & Garrett Grolemund)
+* [ggplot2 extensions](http://www.ggplot2-exts.org/gallery/)
+* ggplot2 vs. base graphics
+    + [Use base graphics!](http://simplystatistics.org/2016/02/11/why-i-dont-use-ggplot2/) (Jeff Leek)
+    + [Use ggplot2!](http://varianceexplained.org/r/why-I-use-ggplot2/) (David Robinson)
+    + [Comparing ggplot2 and base graphics](http://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/) (Nathan Yau)
