@@ -498,6 +498,47 @@ bind_rows(pl1, pl2, pl3) %>%
   guides(fill = guide_colorbar(title.position = "top", title.hjust = 0.5))
 ```
 
+We can also use heat maps to compare the amount of error present for combinations of variables.
+
+```{r thresholds, echo = FALSE, message = FALSE, fig.width = 8, fig.height = 8, out.width = "80%", fig.align = "center"}
+library(RColorBrewer)
+adaptList <- read.csv("data/adaptList_SimulationResults.csv", stringsAsFactors = FALSE)
+
+# Read in results from test info
+info <- read.csv("data/info_rep_tracker.csv", stringsAsFactors = FALSE)
+means <- colMeans(info[,2:ncol(info)])
+for(i in 38:ncol(adaptList)){
+    name <- colnames(adaptList)[i]
+    adaptList[,paste0(name, "_Info")] <- means[name] - adaptList[,name]
+}
+
+# Find Optimal Thresholds
+condition_bias <- rowSums(abs(adaptList[,c("StartCor_Bias_Info", "StartLow_Bias_Info", "StartHigh_Bias_Info")]))
+opt_down <- adaptList[which.min(condition_bias),"AdaptDown"]
+opt_up <- adaptList[which.min(condition_bias),"AdaptUp"]
+
+colors <- brewer.pal(9, "Spectral")
+
+mse_cols <- rev(colors)
+
+ggplot(adaptList, aes(x = AdaptDown, y = AdaptUp, z = Marg_MSE_Info,
+  fill = Marg_MSE_Info)) +
+  geom_tile() +
+  coord_equal() +
+  scale_fill_gradientn(name = "Information - No Information",lim = c(-0.06, 0),
+    na.value = "white", colours = rev(mse_cols),
+  guide = guide_colorbar(title.position = "top", title.hjust = 0.5, barwidth = 12,
+    ticks = FALSE, label.hjust = 0.5)) +
+  geom_point(aes(x = 35, y = 80), shape = 8, size = 5) +
+  geom_point(aes(x = opt_down, y = opt_up), shape = 18, size = 5) +
+  scale_x_continuous(breaks = seq(0, 100, 5)) +
+  scale_y_continuous(breaks = seq(0, 100, 5)) +
+  labs(x = "Adapt Down Threshold", y = "Adapt Up Threshold", title = "Marginal MSE",
+    subtitle = "Information Comparison") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
 Alternatively we could do more fun things like look at which US cities have the most breweries.
 
 ```{r brew_map, echo = FALSE, message = FALSE, out.width = "80%", fig.align = "center"}
@@ -576,17 +617,18 @@ ggplot(data = sum_data, mapping = aes(x = state, y = mean, color = state,
 Finally, there are many extensions to **ggplot2** (like the [**gganimate**](https://github.com/dgrtwo/gganimate) package from [David Robinson](https://twitter.com/drob)), which we can use to plot the probability of KU winning a basketball game over time.
 
 ```{r ani_example, echo = FALSE, message = FALSE, fig.align = "center", fig.show = "animate", interval = 0.2, warning = FALSE}
-full_game <- read.csv("data/ku_kstate.csv", stringsAsFactors = FALSE)
+full_game <- read.csv("data/2017-01-28_Kentucky_vs_Kansas.csv",
+  stringsAsFactors = FALSE)
 
 library(gganimate)
 
 p <- full_game %>%
-  filter(second %% 20 == 0) %>%
-  gather(team, winprob, home_winprob:away_winprob) %>%
-  ggplot(aes(x = min_played, y = winprob, color = team, frame = min_played)) +
+  filter(TimeSec %% 20 == 0) %>%
+  gather(team, winprob, Kansas:Kentucky) %>%
+  ggplot(aes(x = MinPlayed, y = winprob, color = team, frame = MinPlayed)) +
   geom_line(aes(cumulative = TRUE), size = 1) +
-  scale_color_manual(values = c("#512888", "#0051BA"),
-    labels = c("Kansas State", "Kansas")) +
+  scale_color_manual(values = c("#E8000D", "#005DAA"),
+    labels = c("Kansas", "Kentucky")) +
   geom_hline(aes(yintercept = 0.5), color = "#000000", linetype = "dashed",
     size = 1) +
   scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, by = 0.1),
