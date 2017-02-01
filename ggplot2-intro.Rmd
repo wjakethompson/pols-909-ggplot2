@@ -96,21 +96,21 @@ ggplot(data = <data>, mapping = aes(<mappings>)) +
 
 In this structure `data` defines the data for the plot, `mapping` defines how the aesthetics are mapped to different variables, and the `geom` commands add elements to the plot. For example, using our simulated data, we can map the predictor to the x-axis, the outcome to the y-axis, and make a scatterplot.
 
-```{r basic_scatter}
+```{r basic_scatter, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point()
 ```
 
 We could also make a bar plot to show the number of respondents from each group.
 
-```{r basic_bar}
+```{r basic_bar, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = race)) +
   geom_bar()
 ```
 
 Or we could make a histogram to look at the distribution of our outcome variable.
 
-```{r basic_hist}
+```{r basic_hist, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = outcome)) +
   geom_histogram()
 ```
@@ -122,14 +122,14 @@ Notice that for the barplot and histogram we did not define an aesthetic for the
 
 Let's go back to our scatterplot to look at how we can change the details to look more like what we want.
 
-```{r basic_scatter2}
+```{r basic_scatter2, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point()
 ```
 
 We can change aspects of the geom itself by adding arguments to the geom call.
 
-```{r next_scatter}
+```{r next_scatter, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point(color = "blue", size = 3, alpha = 0.3, shape = 15)
 ```
@@ -138,7 +138,7 @@ Here, we've make the dots square, bigger, blue, and slightly transparent. A full
 
 It is also possible to map these aesthetics to variables in the dataset, just like we did with the axes.
 
-```{r aes_scatter}
+```{r aes_scatter, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
   color = gender)) +
   geom_point()
@@ -146,10 +146,10 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
 
 Now each gender has its own color, and a legend is automatically generated. We can also mix aesthetics that are and are not mapped to variables.
 
-```{r mixed_scatter}
+```{r mixed_scatter, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
   color = gender)) +
-  geom_point(shape = 15, alpha = 0.6)
+  geom_point(shape = 15, alpha = 0.6, size = 3)
 ```
 
 Here, color is still assigned to gender, but the shape and alpha aesthetics are applied to the entire geom.
@@ -159,7 +159,7 @@ Here, color is still assigned to gender, but the shape and alpha aesthetics are 
 
 Often, we want to add additional elements to our plots. This is straightforward using **ggplot2**, we simply add another geom.
 
-```{r layer_geom}
+```{r layer_geom, out.width = "60%"}
 ggplot(data = mlm_data, aes(x = predictor, y = outcome)) +
   geom_point() +
   geom_smooth(method = "lm")
@@ -167,7 +167,7 @@ ggplot(data = mlm_data, aes(x = predictor, y = outcome)) +
 
 By default, `geom_smooth` uses `method = "gam"` for sample greater than or equal to 1000, but we can choose a linear model by using `method = "lm"`. Just like before we can also map aesthetics to other variables.
 
-```{r layer_aes}
+```{r layer_aes, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
   color = gender)) +
   geom_point() +
@@ -176,7 +176,7 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome,
 
 It's also possible to apply map aesthetics to additional variables for only specific geoms.
 
-```{r geom_aes}
+```{r geom_aes, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point() +
   geom_smooth(mapping = aes(color = gender), method = "lm")
@@ -186,7 +186,7 @@ Notice that we've moved the color mapping to the `geom_smooth` call. This result
 
 This can also be applied to data. For example, we could only plot points from the Hispanic group, but use the full data set to fit the smooth lines.
 
-```{r geom_data}
+```{r geom_data, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point(data = filter(mlm_data, race == "Hispanic")) +
   geom_smooth(mapping = aes(color = gender), method = "lm")
@@ -197,7 +197,7 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
 
 Sometimes it can be beneficial to look at groups separately, rather than together in a single plot. This can be accomplished with facetting.
 
-```{r facet}
+```{r facet, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point() +
   geom_smooth(method = "lm") +
@@ -206,7 +206,7 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
 
 It may also be helpful to plot the full data within each facet and just highlight the specific group. This can be accomplished by using two calls to geom_point, and removing the facetting variable in the first.
 
-```{r facet_group}
+```{r facet_group, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
   geom_point(mapping = aes(color = gender), alpha = 0.5) +
@@ -219,7 +219,7 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
 
 So far we've looked at how we can use geoms and aesthetics to create the elements of a plot. But **ggplot2** also provides methods for formatting the plots to look exactly how you want. For example, we can add titles and change scales.
 
-```{r labs_scale}
+```{r labs_scale, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
   geom_point(mapping = aes(color = gender), alpha = 0.5) +
@@ -237,7 +237,7 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
 
 We can also define the colors that get used.
 
-```{r scale_color}
+```{r scale_color, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
   geom_point(mapping = aes(color = gender), alpha = 0.5) +
@@ -256,7 +256,7 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
 
 Basically anything you want to change about the looks can be altered with scales or themes.
 
-```{r themes}
+```{r themes, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
   geom_point(mapping = aes(color = gender), alpha = 0.5) +
@@ -283,7 +283,7 @@ ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
 
 To format legends, we can use the `guides` function.
 
-```{r legends}
+```{r legends, out.width = "60%"}
 ggplot(data = mlm_data, mapping = aes(x = predictor, y = outcome)) +
   geom_point(data = select(mlm_data, -gender), alpha = 0.5) +
   geom_point(mapping = aes(color = gender), alpha = 0.5) +
@@ -324,7 +324,7 @@ So far, we've only talked in detail about a few commands that would be beneficia
 
 For example, we can plot how student adapt through different levels of an adaptive assessment.
 
-```{r emip_adapt, echo = FALSE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 7, out.width = "80%", fig.align = "center"}
+```{r emip_adapt, echo = FALSE, message = FALSE, warning = FALSE, fig.width = 10, fig.height = 7, out.width = "70%", fig.align = "center"}
 load("data/EMIP_Data_Simulated.RData")
 library(tidyr)
 
@@ -418,7 +418,7 @@ ggplot() +
 
 Or we can look at the probability of a respondent providing the correct response to an item, given their ability, in different types of psychometric models.
 
-```{r emip_mirt, echo = FALSE, message = FALSE, fig.width = 10, fig.height = 11, out.width = "70%", fig.align = "center"}
+```{r emip_mirt, echo = FALSE, message = FALSE, fig.width = 10, fig.height = 11, out.width = "60%", fig.align = "center"}
 library(tidyr)
 library(purrr)
 
@@ -500,7 +500,7 @@ bind_rows(pl1, pl2, pl3) %>%
 
 We can also use heat maps to compare the amount of error present for combinations of variables.
 
-```{r thresholds, echo = FALSE, message = FALSE, fig.width = 8, fig.height = 8, out.width = "80%", fig.align = "center"}
+```{r thresholds, echo = FALSE, message = FALSE, fig.width = 8, fig.height = 8, out.width = "60%", fig.align = "center"}
 library(RColorBrewer)
 adaptList <- read.csv("data/adaptList_SimulationResults.csv", stringsAsFactors = FALSE)
 
@@ -541,7 +541,7 @@ ggplot(adaptList, aes(x = AdaptDown, y = AdaptUp, z = Marg_MSE_Info,
 
 Alternatively we could do more fun things like look at which US cities have the most breweries.
 
-```{r brew_map, echo = FALSE, message = FALSE, out.width = "80%", fig.align = "center"}
+```{r brew_map, echo = FALSE, message = FALSE, out.width = "70%", fig.align = "center"}
 library(maps)
 library(readr)
 all_breweries <- read_csv("data/all_breweries.csv",
@@ -579,7 +579,7 @@ ggplot() +
 
 Or look at the distribution of brewery ratings for the surrounding states.
 
-```{r pirate, echo = FALSE, message = FALSE, out.width = "80%", fig.align = "center"}
+```{r pirate, echo = FALSE, message = FALSE, out.width = "60%", fig.align = "center"}
 brew_plot <- all_breweries %>%
   filter(!is.na(brewery_rating), !is.na(num_beers),
     state %in% c("Kansas", "Oklahoma", "Missouri", "Missouri", "Iowa",
@@ -656,3 +656,11 @@ I really don't think it's an exaggeration to say the possibilities are endless!
     + [Use base graphics!](http://simplystatistics.org/2016/02/11/why-i-dont-use-ggplot2/) (Jeff Leek)
     + [Use ggplot2!](http://varianceexplained.org/r/why-I-use-ggplot2/) (David Robinson)
     + [Comparing ggplot2 and base graphics](http://flowingdata.com/2016/03/22/comparing-ggplot2-and-r-base-graphics/) (Nathan Yau)
+
+
+## Session Information
+
+```{r session_info}
+devtools::session_info()
+```
+
