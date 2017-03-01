@@ -12,7 +12,6 @@ knitr::opts_chunk$set(
   comment = "#>",
   collapse = TRUE,
   cache = FALSE,
-  out.width = "60%",
   fig.align = 'center',
   fig.show = "hold"
 )
@@ -24,7 +23,7 @@ library(haven)
 gcse <- read_dta("data/gcse.dta")
 ```
 
-```{r facet_plot, fig.height = 15, fig.asp = 2}
+```{r facet_plot, fig.height = 15, fig.asp = 2, out.width = "90%"}
 library(ggplot2)
 
 ggplot(data = gcse, mapping = aes(x = lrt, y = gcse)) +
@@ -89,7 +88,7 @@ dat$y <- (beta0 + rep(U[,1], times = p)) + (beta1 + rep(U[, 2], times = p)) * lo
 
 First we create a blank template plot with some formatting
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
 p <- ggplot(data = dat, mapping = aes(x = obs, y = y)) +
   scale_x_continuous(limits = c(1, 10), breaks = seq(1, 10, 1)) +
   theme_bw()
@@ -98,27 +97,27 @@ p
 
 Now, we create our initial scatter plot.
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
 p + geom_point()
 ```
 
 Draw a line for each individual by assigning group to the person identifier.
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
 p + geom_point() +
   geom_line(aes(group = id))
 ```
 
 Remove the points and add an overall loess trend line.
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
 p + geom_line(aes(group = id)) +
   geom_smooth(method = "loess", color = "red", se = FALSE)
 ```
 
 Split out by group, drawing a trend line for each group individually.
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
 p + geom_line(aes(group = id)) +
   geom_smooth(method = "loess", color = "red", se = FALSE) +
   facet_wrap(~ group)
@@ -126,7 +125,7 @@ p + geom_line(aes(group = id)) +
 
 We can add the overall trend line by adding a second `geom_smooth` layer that uses the same data, but without the facetting variable.
 
-```{r, message = FALSE, fig.height = 7, fig.width = 12}
+```{r, message = FALSE, fig.height = 7, fig.width = 12, out.width = "60%"}
 library(dplyr)
 
 p + geom_line(aes(group = id)) +
@@ -138,7 +137,7 @@ p + geom_line(aes(group = id)) +
 
 Finally, add a color aesthetic so a legend will be created.
 
-```{r, fig.height = 7, fig.width = 12}
+```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
 p + geom_line(aes(group = id)) +
   geom_smooth(aes(color = "Group Trend"), method = "loess", se = FALSE) +
   geom_smooth(data = select(dat, -group), aes(color = "Overall Trend"),
