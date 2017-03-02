@@ -33,12 +33,30 @@ ggplot(data = gcse, mapping = aes(x = lrt, y = gcse)) +
   labs(caption = "grouped by school")
 ```
 
+Alternatively, we can randomly select 25 schools to display, and add a yellow line to show the overall regression line for the full data set to each facet.
+
+```{r new_facet, fig.height = 10, fig.asp = 1, out.width = "90%", message = FALSE}
+library(dplyr)
+num_schools <- 25
+
+filter_gcse <- gcse %>%
+  filter(school %in% sample(unique(school), size = num_schools,
+    replace = FALSE))
+
+ggplot(data = filter_gcse, mapping = aes(x = lrt, y = gcse)) +
+  facet_wrap(~ school, ncol = 5) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE) +
+  geom_smooth(data = dplyr::select(gcse, -school), method = "lm",
+    color = "yellow") +
+  labs(caption = "grouped by school")
+```
 
 ## Time series plots
 
 First we generate some longitudinal data (adapted from [here](https://hopstat.wordpress.com/2014/10/30/my-commonly-done-ggplot2-graphs/)).
 
-```{r time_series_data}
+```{r time_series_data, message = FALSE}
 library(MASS)
 library(nlme)
 library(purrr)
@@ -88,7 +106,7 @@ dat$y <- (beta0 + rep(U[,1], times = p)) + (beta1 + rep(U[, 2], times = p)) * lo
 
 First we create a blank template plot with some formatting
 
-```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
+```{r, fig.height = 4, fig.width = 6, out.width = "60%"}
 p <- ggplot(data = dat, mapping = aes(x = obs, y = y)) +
   scale_x_continuous(limits = c(1, 10), breaks = seq(1, 10, 1)) +
   theme_bw()
@@ -97,27 +115,27 @@ p
 
 Now, we create our initial scatter plot.
 
-```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
+```{r, fig.height = 4, fig.width = 6, out.width = "60%"}
 p + geom_point()
 ```
 
 Draw a line for each individual by assigning group to the person identifier.
 
-```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
+```{r, fig.height = 4, fig.width = 6, out.width = "60%"}
 p + geom_point() +
   geom_line(aes(group = id))
 ```
 
 Remove the points and add an overall loess trend line.
 
-```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
+```{r, fig.height = 4, fig.width = 6, out.width = "60%"}
 p + geom_line(aes(group = id)) +
   geom_smooth(method = "loess", color = "red", se = FALSE)
 ```
 
 Split out by group, drawing a trend line for each group individually.
 
-```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
+```{r, fig.height = 4, fig.width = 6, out.width = "60%"}
 p + geom_line(aes(group = id)) +
   geom_smooth(method = "loess", color = "red", se = FALSE) +
   facet_wrap(~ group)
@@ -125,27 +143,32 @@ p + geom_line(aes(group = id)) +
 
 We can add the overall trend line by adding a second `geom_smooth` layer that uses the same data, but without the facetting variable.
 
-```{r, message = FALSE, fig.height = 7, fig.width = 12, out.width = "60%"}
-library(dplyr)
+```{r, message = FALSE, fig.height = 4, fig.width = 6, out.width = "60%"}
 
 p + geom_line(aes(group = id)) +
   geom_smooth(method = "loess", color = "red", se = FALSE) +
-  geom_smooth(data = select(dat, -group), method = "loess", color = "blue",
+  geom_smooth(data = dplyr::select(dat, -group), method = "loess", color = "blue",
     se = FALSE) +
   facet_wrap(~ group)
 ```
 
-Finally, add a color aesthetic so a legend will be created.
+Finally, add a color aesthetic so a legend will be created, remove the space between facet panels, and remove grid lines. We can also save the plot using `ggsave`.
 
-```{r, fig.height = 7, fig.width = 12, out.width = "60%"}
-p + geom_line(aes(group = id)) +
+```{r, fig.height = 4, fig.width = 6, out.width = "60%"}
+p <- p + geom_line(aes(group = id)) +
   geom_smooth(aes(color = "Group Trend"), method = "loess", se = FALSE) +
-  geom_smooth(data = select(dat, -group), aes(color = "Overall Trend"),
+  geom_smooth(data = dplyr::select(dat, -group), aes(color = "Overall Trend"),
     method = "loess", se = FALSE) +
   facet_wrap(~ group) +
   scale_color_manual(name = NULL, values = c("red", "blue")) +
   theme(
-    legend.position = "bottom"
+    legend.position = "bottom",
+    panel.spacing = unit(0, "lines"),
+    panel.grid = element_blank()
   )
+ggsave("saved_p.png", p, width = 12, height = 8, units = "in")
+
+# can also print to screen
+p
 ```
 
